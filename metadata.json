@@ -1,0 +1,8 @@
+{
+  "name": "Shuttle Connect",
+  "description": "Enterprise shuttle booking system with GPS tracking and QR check-in.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}
