@@ -3,10 +3,10 @@ import { RouteOption, Station, Language } from './types';
 export const ROUTES_DATA: RouteOption[] = [
   // --- กะเช้า (Morning Shift) ---
   // ขามา (Inbound)
-  { id: 'm1', name: 'สายอยุธยา (รับเช้า)', time: '06:00', type: 'morning', maxSeats: 40 },
-  { id: 'm2', name: 'สายสระบุรี (รับเช้า)', time: '06:00', type: 'morning', maxSeats: 40 },
-  { id: 'm3', name: 'สายรังสิต (รับเช้า)', time: '06:00', type: 'morning', maxSeats: 40 },
-  { id: 'm4', name: 'สายนวนคร (รับเช้า)', time: '06:15', type: 'morning', maxSeats: 40 },
+  { id: 'm1', name: 'สายอยุธยา (รับเช้า)', time: '06:00', type: 'morning', maxSeats: 40, stationIds: ['s5'] },
+  { id: 'm2', name: 'สายสระบุรี (รับเช้า)', time: '06:00', type: 'morning', maxSeats: 40, stationIds: ['s4'] },
+  { id: 'm3', name: 'สายรังสิต (รับเช้า)', time: '06:00', type: 'morning', maxSeats: 40, stationIds: ['s2'] },
+  { id: 'm4', name: 'สายนวนคร (รับเช้า)', time: '06:15', type: 'morning', maxSeats: 40, stationIds: ['s3'] },
 
   // ขากลับ ปกติ 17:00 (Outbound Normal)
   { id: 'mn1', name: 'สายรังสิต (เลิกงาน)', time: '17:00', type: 'evening', maxSeats: 40 },

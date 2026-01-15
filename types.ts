@@ -22,13 +22,10 @@ export interface RouteOption {
   id: string;
   name: string;
   time: string;
-  type: 'morning' | 'evening' | 'night';
-  description?: string;
+  type: 'morning' | 'evening';
   maxSeats: number;
-  price?: number;
-  licensePlate?: string;
-  driverPhone?: string;
-  stationIds?: string[]; // จุดจอดที่สายนี้แวะ
+  description?: string;
+  stationIds?: string[]; // เพิ่มบรรทัดนี้
 }
 
 export interface Station {
