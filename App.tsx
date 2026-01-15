@@ -444,24 +444,52 @@ const DriverDashboard = ({ user, lang }: any) => {
         return groups;
     }, [currentBookings]);
 
+    // Count bookings per route for today
+    const getRouteBookingCount = (routeId: string) => {
+        return bookings.filter(b =>
+            b.routeId === routeId &&
+            isToday(b.timestamp) &&
+            b.status !== BookingStatus.CANCELLED
+        ).length;
+    };
+
     if (!selectedRouteId) {
         return (
             <div className="p-4 pb-24">
                 <h2 className="text-xl font-bold mb-4 text-gray-800">Select Your Route Today</h2>
                 <div className="space-y-3">
-                    {routes.map(route => (
-                        <div 
-                            key={route.id}
-                            onClick={() => setSelectedRouteId(route.id)}
-                            className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 active:scale-95 transition cursor-pointer flex justify-between items-center"
-                        >
-                            <div>
-                                <div className="font-bold text-gray-800">{route.name}</div>
-                                <div className="text-sm text-gray-500">{route.time} • {route.type}</div>
+                    {routes.map(route => {
+                        const bookingCount = getRouteBookingCount(route.id);
+                        return (
+                            <div
+                                key={route.id}
+                                onClick={() => setSelectedRouteId(route.id)}
+                                className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 active:scale-95 transition cursor-pointer"
+                            >
+                                <div className="flex justify-between items-start">
+                                    <div className="flex-1">
+                                        <div className="font-bold text-gray-800">{route.name}</div>
+                                        <div className="text-sm text-gray-500">{route.time} • {route.type}</div>
+                                        {route.licensePlate && (
+                                            <div className="mt-2 inline-flex items-center gap-1 bg-gray-100 px-2 py-1 rounded text-xs font-mono font-bold text-gray-600">
+                                                <Bus size={12} />
+                                                {route.licensePlate}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="text-right">
+                                            <div className={`text-2xl font-bold ${bookingCount > 0 ? 'text-teal-600' : 'text-gray-300'}`}>
+                                                {bookingCount}
+                                            </div>
+                                            <div className="text-xs text-gray-400">คน</div>
+                                        </div>
+                                        <ChevronRight className="text-gray-400" />
+                                    </div>
+                                </div>
                             </div>
-                            <ChevronRight className="text-gray-400" />
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </div>
         );
