@@ -319,7 +319,7 @@ const Login = ({ onLogin, lang }: any) => {
             <Bus className="w-12 h-12 text-blue-600" />
           </div>
         </div>
-        <h1 className="text-2xl font-bold text-center text-gray-800 mb-1">Shuttle Connect</h1>
+        <h1 className="text-2xl font-bold text-center text-gray-800 mb-1">ระบบจองรถรับ-ส่ง</h1>
         <p className="text-center text-gray-500 mb-8">{isRegister ? t.register : t.login}</p>
         
         <div className="space-y-2">
