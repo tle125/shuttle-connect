@@ -402,7 +402,7 @@ const DriverDashboard = ({ user, lang }: any) => {
 
     const handleAction = async (bookingId: string, status: BookingStatus) => {
         await updateBookingStatus(bookingId, status);
-        loadBookings(); // Refresh
+        await loadData(); // Refresh
 
         // Show minimal feedback
         const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
