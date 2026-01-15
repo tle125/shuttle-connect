@@ -1021,19 +1021,35 @@ const AdminDashboard = ({ lang, toggleLang }: any) => {
     };
 
     const exportData = () => {
-        const headers = ["ID", "User", "Route", "Station", "Status", "Time"];
-        const rows = bookings.map(b => [b.id, b.userName, b.routeName, b.stationName, b.status, new Date(b.timestamp).toLocaleString()]);
-        
-        let csvContent = "data:text/csv;charset=utf-8," 
-            + headers.join(",") + "\n" 
-            + rows.map(e => e.join(",")).join("\n");
-            
-        const encodedUri = encodeURI(csvContent);
+        const headers = ["ID", "ชื่อผู้โดยสาร", "สาย", "จุดจอด", "สถานะ", "เวลา"];
+        const rows = dateFilteredBookings.map(b => [
+            b.id,
+            b.userName,
+            b.routeName,
+            b.stationName,
+            b.status === BookingStatus.COMPLETED ? 'ขึ้นรถแล้ว' :
+            b.status === BookingStatus.CANCELLED ? 'ยกเลิก' :
+            b.status === BookingStatus.NOSHOW ? 'ไม่มา' : 'รอขึ้นรถ',
+            new Date(b.timestamp).toLocaleString('th-TH')
+        ]);
+
+        // Add BOM for UTF-8 to support Thai characters in Excel
+        const BOM = "\uFEFF";
+        const csvContent = BOM + headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n");
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "shuttle_data.csv");
+        link.setAttribute("href", url);
+
+        // Add date to filename
+        const dateStr = currentDate.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
+        link.setAttribute("download", `shuttle_data_${dateStr}.csv`);
+
         document.body.appendChild(link);
         link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
     };
 
     const filteredBookings = dateFilteredBookings.filter(b =>
