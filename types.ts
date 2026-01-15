@@ -28,6 +28,7 @@ export interface RouteOption {
   price?: number;
   licensePlate?: string;
   driverPhone?: string;
+  stationIds?: string[]; // จุดจอดที่สายนี้แวะ
 }
 
 export interface Station {

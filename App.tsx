@@ -1197,6 +1197,44 @@ const AdminDashboard = ({ lang, toggleLang }: any) => {
         }
     };
 
+    const handleManageRouteStations = async (route: RouteOption) => {
+        // สร้าง checkbox list ของ stations
+        const stationCheckboxes = stations.map(s => {
+            const isChecked = route.stationIds?.includes(s.id) || false;
+            return `<label class="flex items-center gap-2 p-2 hover:bg-gray-100 rounded cursor-pointer">
+                <input type="checkbox" class="station-checkbox" value="${s.id}" ${isChecked ? 'checked' : ''}>
+                <span>${s.name}</span>
+            </label>`;
+        }).join('');
+
+        const { value: confirmed } = await Swal.fire({
+            title: `จัดการจุดจอดของ "${route.name}"`,
+            html: `
+                <div class="text-left max-h-64 overflow-y-auto">
+                    ${stations.length > 0 ? stationCheckboxes : '<p class="text-gray-500">ยังไม่มีจุดจอด กรุณาเพิ่มจุดจอดก่อน</p>'}
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'บันทึก',
+            cancelButtonText: 'ยกเลิก',
+            preConfirm: () => {
+                const checkboxes = document.querySelectorAll('.station-checkbox:checked') as NodeListOf<HTMLInputElement>;
+                const selectedIds = Array.from(checkboxes).map(cb => cb.value);
+                return selectedIds;
+            }
+        });
+
+        if (confirmed !== undefined) {
+            const updatedRoute: RouteOption = {
+                ...route,
+                stationIds: confirmed
+            };
+            await saveRoute(updatedRoute);
+            setRoutes(prev => prev.map(r => r.id === route.id ? updatedRoute : r));
+            Swal.fire({ icon: 'success', text: `บันทึกจุดจอดของ ${route.name} สำเร็จ (${confirmed.length} จุด)`, timer: 1500, showConfirmButton: false });
+        }
+    };
+
     const handleAddStation = async () => {
         const { value: formValues } = await Swal.fire({
             title: 'เพิ่มจุดจอดใหม่',
@@ -1318,14 +1356,18 @@ const AdminDashboard = ({ lang, toggleLang }: any) => {
                         </div>
                         <div className="space-y-2 max-h-64 overflow-y-auto">
                             {routes.map(route => (
-                                <div key={route.id} className="bg-white p-3 rounded-lg shadow-sm border border-gray-100 flex justify-between items-center">
-                                    <div>
-                                        <div className="font-medium text-gray-800">{route.name}</div>
-                                        <div className="text-xs text-gray-500">{route.time} • {route.type} • {route.maxSeats} ที่นั่ง</div>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <button onClick={() => handleEditRoute(route)} className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200"><Edit size={16} /></button>
-                                        <button onClick={() => handleDeleteRoute(route)} className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"><X size={16} /></button>
+                                <div key={route.id} className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <div className="font-medium text-gray-800">{route.name}</div>
+                                            <div className="text-xs text-gray-500">{route.time} • {route.type} • {route.maxSeats} ที่นั่ง</div>
+                                            <div className="text-xs text-teal-600 mt-1">📍 จุดจอด: {route.stationIds?.length || 0} จุด</div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => handleManageRouteStations(route)} className="p-2 bg-teal-100 text-teal-600 rounded-lg hover:bg-teal-200" title="จัดการจุดจอด"><MapIcon size={16} /></button>
+                                            <button onClick={() => handleEditRoute(route)} className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200"><Edit size={16} /></button>
+                                            <button onClick={() => handleDeleteRoute(route)} className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"><X size={16} /></button>
+                                        </div>
                                     </div>
                                 </div>
                             ))}
@@ -1791,32 +1833,44 @@ const BookingFlow = ({ user, lang }: any) => {
             )}
 
             {/* STEP 2: Select Station */}
-            {step === 2 && selectedRoute && (
-                <div className="space-y-3 pb-20 animate-in slide-in-from-right-10 duration-200">
-                    <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl mb-4">
-                        <div className="text-xs text-blue-600 uppercase font-bold mb-1">Selected Route</div>
-                        <div className="font-bold text-blue-900 text-lg">{selectedRoute.name}</div>
-                        <div className="text-sm text-blue-700">{selectedRoute.time} • {direction.toUpperCase()}</div>
-                    </div>
-                    <h3 className="font-semibold text-gray-500 mb-2 px-1">เลือกจุดขึ้น-ลง</h3>
-                    {stations.map(station => (
-                        <div 
-                            key={station.id}
-                            onClick={() => handleStationSelect(station)}
-                            className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:border-blue-300 active:scale-95 transition cursor-pointer flex justify-between items-center"
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className="bg-blue-50 p-2 rounded-full text-blue-500"><MapIcon size={20} /></div>
-                                <div>
-                                    <div className="font-bold text-gray-800">{station.name}</div>
-                                    <div className="text-xs text-gray-500">{station.description}</div>
-                                </div>
-                            </div>
-                            <ChevronRight size={18} className="text-gray-300" />
+            {step === 2 && selectedRoute && (() => {
+                // Filter stations for this route
+                const routeStations = selectedRoute.stationIds?.length
+                    ? stations.filter(s => selectedRoute.stationIds?.includes(s.id))
+                    : stations; // ถ้ายังไม่ได้กำหนดจุดจอด แสดงทั้งหมด (backward compatible)
+
+                return (
+                    <div className="space-y-3 pb-20 animate-in slide-in-from-right-10 duration-200">
+                        <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl mb-4">
+                            <div className="text-xs text-blue-600 uppercase font-bold mb-1">เลือกสายรถแล้ว</div>
+                            <div className="font-bold text-blue-900 text-lg">{selectedRoute.name}</div>
+                            <div className="text-sm text-blue-700">{selectedRoute.time} • {direction === 'inbound' ? 'ขาเข้า' : 'ขาออก'}</div>
                         </div>
-                    ))}
-                </div>
-            )}
+                        <h3 className="font-semibold text-gray-500 mb-2 px-1">เลือกจุดขึ้น-ลง ({routeStations.length} จุด)</h3>
+                        {routeStations.length === 0 ? (
+                            <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-xl text-center">
+                                <p className="text-yellow-700">สายนี้ยังไม่มีจุดจอด</p>
+                                <p className="text-xs text-yellow-600 mt-1">กรุณาติดต่อผู้ดูแลระบบ</p>
+                            </div>
+                        ) : routeStations.map(station => (
+                            <div
+                                key={station.id}
+                                onClick={() => handleStationSelect(station)}
+                                className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:border-blue-300 active:scale-95 transition cursor-pointer flex justify-between items-center"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-blue-50 p-2 rounded-full text-blue-500"><MapIcon size={20} /></div>
+                                    <div>
+                                        <div className="font-bold text-gray-800">{station.name}</div>
+                                        <div className="text-xs text-gray-500">{station.description}</div>
+                                    </div>
+                                </div>
+                                <ChevronRight size={18} className="text-gray-300" />
+                            </div>
+                        ))}
+                    </div>
+                );
+            })()}
 
             {/* STEP 3: Select Dates */}
             {step === 3 && selectedRoute && selectedStation && (
