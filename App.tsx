@@ -1202,8 +1202,8 @@ const AdminDashboard = ({ lang, toggleLang }: any) => {
             title: 'เพิ่มจุดจอดใหม่',
             html: `
                 <input id="swal-name" class="swal2-input" placeholder="ชื่อจุดจอด เช่น ตลาดรังสิต">
-                <input id="swal-lat" class="swal2-input" type="number" step="0.0001" placeholder="Latitude เช่น 13.9897">
-                <input id="swal-lng" class="swal2-input" type="number" step="0.0001" placeholder="Longitude เช่น 100.6177">
+                <input id="swal-lat" class="swal2-input" type="number" step="0.0001" placeholder="Latitude (ไม่บังคับ)">
+                <input id="swal-lng" class="swal2-input" type="number" step="0.0001" placeholder="Longitude (ไม่บังคับ)">
                 <input id="swal-desc" class="swal2-input" placeholder="รายละเอียด เช่น ป้ายรถเมล์หน้าตลาด">
             `,
             focusConfirm: false,
@@ -1212,11 +1212,13 @@ const AdminDashboard = ({ lang, toggleLang }: any) => {
             cancelButtonText: 'ยกเลิก',
             preConfirm: () => {
                 const name = (document.getElementById('swal-name') as HTMLInputElement).value;
-                const lat = parseFloat((document.getElementById('swal-lat') as HTMLInputElement).value);
-                const lng = parseFloat((document.getElementById('swal-lng') as HTMLInputElement).value);
+                const latVal = (document.getElementById('swal-lat') as HTMLInputElement).value;
+                const lngVal = (document.getElementById('swal-lng') as HTMLInputElement).value;
+                const lat = latVal ? parseFloat(latVal) : 0;
+                const lng = lngVal ? parseFloat(lngVal) : 0;
                 const desc = (document.getElementById('swal-desc') as HTMLInputElement).value;
-                if (!name || isNaN(lat) || isNaN(lng)) {
-                    Swal.showValidationMessage('กรุณากรอกชื่อและพิกัด');
+                if (!name) {
+                    Swal.showValidationMessage('กรุณากรอกชื่อจุดจอด');
                     return false;
                 }
                 return { name, lat, lng, desc };
@@ -1241,8 +1243,8 @@ const AdminDashboard = ({ lang, toggleLang }: any) => {
             title: 'แก้ไขจุดจอด',
             html: `
                 <input id="swal-name" class="swal2-input" placeholder="ชื่อจุดจอด" value="${station.name}">
-                <input id="swal-lat" class="swal2-input" type="number" step="0.0001" placeholder="Latitude" value="${station.lat}">
-                <input id="swal-lng" class="swal2-input" type="number" step="0.0001" placeholder="Longitude" value="${station.lng}">
+                <input id="swal-lat" class="swal2-input" type="number" step="0.0001" placeholder="Latitude (ไม่บังคับ)" value="${station.lat || ''}">
+                <input id="swal-lng" class="swal2-input" type="number" step="0.0001" placeholder="Longitude (ไม่บังคับ)" value="${station.lng || ''}">
                 <input id="swal-desc" class="swal2-input" placeholder="รายละเอียด" value="${station.description}">
             `,
             focusConfirm: false,
@@ -1251,11 +1253,13 @@ const AdminDashboard = ({ lang, toggleLang }: any) => {
             cancelButtonText: 'ยกเลิก',
             preConfirm: () => {
                 const name = (document.getElementById('swal-name') as HTMLInputElement).value;
-                const lat = parseFloat((document.getElementById('swal-lat') as HTMLInputElement).value);
-                const lng = parseFloat((document.getElementById('swal-lng') as HTMLInputElement).value);
+                const latVal = (document.getElementById('swal-lat') as HTMLInputElement).value;
+                const lngVal = (document.getElementById('swal-lng') as HTMLInputElement).value;
+                const lat = latVal ? parseFloat(latVal) : 0;
+                const lng = lngVal ? parseFloat(lngVal) : 0;
                 const desc = (document.getElementById('swal-desc') as HTMLInputElement).value;
-                if (!name || isNaN(lat) || isNaN(lng)) {
-                    Swal.showValidationMessage('กรุณากรอกชื่อและพิกัด');
+                if (!name) {
+                    Swal.showValidationMessage('กรุณากรอกชื่อจุดจอด');
                     return false;
                 }
                 return { name, lat, lng, desc };
