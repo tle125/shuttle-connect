@@ -1613,12 +1613,14 @@ const BookingFlow = ({ user, lang }: any) => {
     const [selectedDates, setSelectedDates] = useState<Date[]>([]);
     const [direction, setDirection] = useState<'inbound' | 'outbound'>('outbound');
     const [routes, setRoutes] = useState<RouteOption[]>([]);
+    const [stations, setStations] = useState<Station[]>([]);
     const [seatCounts, setSeatCounts] = useState<Record<string, number>>({});
 
     useEffect(() => {
         const loadData = async () => {
-            const routesData = await getRoutes();
+            const [routesData, stationsData] = await Promise.all([getRoutes(), getStations()]);
             setRoutes(routesData);
+            setStations(stationsData);
 
             // Load seat counts for all routes
             const counts: Record<string, number> = {};
@@ -1630,11 +1632,10 @@ const BookingFlow = ({ user, lang }: any) => {
         loadData();
     }, []);
 
-    // Group routes
-    const morningIn = routes.filter(r => r.id.match(/^m\d+$/));
-    const eveningOut = routes.filter(r => r.id.match(/^mn\d+$/) || r.id.match(/^mo\d+$/)); // Fixed regex for normal and OT
-    const nightIn = routes.filter(r => r.id.match(/^n\d+$/));
-    const nightOut = routes.filter(r => r.id.match(/^nn\d+$/) || r.id.match(/^no\d+$/)); // Fixed regex
+    // Group routes by type
+    const morningRoutes = routes.filter(r => r.type === 'morning');
+    const eveningRoutes = routes.filter(r => r.type === 'evening');
+    const nightRoutes = routes.filter(r => r.type === 'night');
 
     const handleRouteSelect = (route: RouteOption, dir: 'inbound' | 'outbound') => {
         setSelectedRoute(route);
@@ -1757,8 +1758,8 @@ const BookingFlow = ({ user, lang }: any) => {
                     <div className="flex-1 overflow-y-auto no-scrollbar space-y-2 pb-20">
                         {activeTab === 'morning' && (
                             <RouteSection
-                                title="Morning (Inbound)"
-                                routes={morningIn}
+                                title="รอบเช้า (Morning)"
+                                routes={morningRoutes}
                                 direction="inbound"
                                 onRouteClick={handleRouteSelect}
                                 t={t}
@@ -1767,8 +1768,8 @@ const BookingFlow = ({ user, lang }: any) => {
                         )}
                         {activeTab === 'evening' && (
                             <RouteSection
-                                title="Evening (Outbound)"
-                                routes={eveningOut}
+                                title="รอบเย็น (Evening)"
+                                routes={eveningRoutes}
                                 direction="outbound"
                                 onRouteClick={handleRouteSelect}
                                 t={t}
@@ -1776,24 +1777,14 @@ const BookingFlow = ({ user, lang }: any) => {
                             />
                         )}
                         {activeTab === 'night' && (
-                            <>
-                                <RouteSection
-                                    title="Night (Inbound)"
-                                    routes={nightIn}
-                                    direction="inbound"
-                                    onRouteClick={handleRouteSelect}
-                                    t={t}
-                                    seatCounts={seatCounts}
-                                />
-                                <RouteSection
-                                    title="Night (Outbound)"
-                                    routes={nightOut}
-                                    direction="outbound"
-                                    onRouteClick={handleRouteSelect}
-                                    t={t}
-                                    seatCounts={seatCounts}
-                                />
-                            </>
+                            <RouteSection
+                                title="กะดึก (Night)"
+                                routes={nightRoutes}
+                                direction="inbound"
+                                onRouteClick={handleRouteSelect}
+                                t={t}
+                                seatCounts={seatCounts}
+                            />
                         )}
                     </div>
                 </>
@@ -1807,8 +1798,8 @@ const BookingFlow = ({ user, lang }: any) => {
                         <div className="font-bold text-blue-900 text-lg">{selectedRoute.name}</div>
                         <div className="text-sm text-blue-700">{selectedRoute.time} • {direction.toUpperCase()}</div>
                     </div>
-                    <h3 className="font-semibold text-gray-500 mb-2 px-1">Available Stations</h3>
-                    {STATIONS_DATA.map(station => (
+                    <h3 className="font-semibold text-gray-500 mb-2 px-1">เลือกจุดขึ้น-ลง</h3>
+                    {stations.map(station => (
                         <div 
                             key={station.id}
                             onClick={() => handleStationSelect(station)}
@@ -1909,8 +1900,15 @@ const MapPage = ({ lang, user, toggleLang }: any) => {
     const t = TRANSLATIONS[lang as Language];
     const navigate = useNavigate();
     const [userLocation, setUserLocation] = useState<[number, number] | undefined>(undefined);
+    const [stations, setStations] = useState<Station[]>([]);
 
     useEffect(() => {
+        const loadStations = async () => {
+            const data = await getStations();
+            setStations(data);
+        };
+        loadStations();
+
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
@@ -1918,7 +1916,6 @@ const MapPage = ({ lang, user, toggleLang }: any) => {
                 },
                 (error) => {
                     console.error("Error getting location", error);
-                    // Default fallback or prompt
                 }
             );
         }
@@ -1931,9 +1928,9 @@ const MapPage = ({ lang, user, toggleLang }: any) => {
                     <ArrowLeft size={24} />
                 </button>
             </div>
-            
-            <MapComponent 
-                stations={STATIONS_DATA}
+
+            <MapComponent
+                stations={stations}
                 center={[14.0, 100.6]} // Rough center between Bangkok and Ayutthaya
                 onStationSelect={(station) => {
                     Swal.fire({
