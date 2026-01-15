@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  Bus, Map as MapIcon, User as UserIcon, LogOut, Settings, 
-  PlusCircle, Search, QrCode, Navigation, Phone, Globe, Menu, X, CheckCircle, AlertTriangle, ArrowRight, ArrowLeft, Sun, Moon, Clock, History, Edit, Truck,
+import {
+  Bus, Map as MapIcon, User as UserIcon, LogOut, Settings,
+  PlusCircle, Search, QrCode, Navigation, Phone, Globe, Menu, X, CheckCircle, AlertTriangle, ArrowRight, ArrowLeft, Sun, Moon, Sunset, Clock, History, Edit, Truck,
   ChevronDown, ChevronUp, Calendar, Check, ChevronLeft, ChevronRight, BarChart as BarChartIcon, Camera, Megaphone, UserX, Users
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -1036,10 +1036,35 @@ const AdminDashboard = ({ lang, toggleLang }: any) => {
         link.click();
     };
 
-    const filteredBookings = dateFilteredBookings.filter(b => 
-        b.userName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    const filteredBookings = dateFilteredBookings.filter(b =>
+        b.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         b.id.includes(searchTerm)
     );
+
+    // Group bookings by time period
+    const groupedByPeriod = useMemo(() => {
+        const groups: { morning: Booking[], evening: Booking[], night: Booking[] } = {
+            morning: [],
+            evening: [],
+            night: []
+        };
+
+        filteredBookings.forEach(b => {
+            // Check route type from routes data
+            const route = routes.find(r => r.id === b.routeId);
+            if (route) {
+                if (route.type === 'morning') {
+                    groups.morning.push(b);
+                } else if (route.type === 'evening') {
+                    groups.evening.push(b);
+                } else if (route.type === 'night') {
+                    groups.night.push(b);
+                }
+            }
+        });
+
+        return groups;
+    }, [filteredBookings, routes]);
     
     if (isManageVehicles) {
         return (
@@ -1179,7 +1204,7 @@ const AdminDashboard = ({ lang, toggleLang }: any) => {
                 <div className="p-4 border-b border-gray-100">
                      <div className="flex items-center bg-gray-100 px-3 rounded-lg">
                         <Search size={16} className="text-gray-400" />
-                        <input 
+                        <input
                             className="bg-transparent border-none p-2 text-sm outline-none w-full"
                             placeholder="Search name or ID..."
                             value={searchTerm}
@@ -1187,29 +1212,92 @@ const AdminDashboard = ({ lang, toggleLang }: any) => {
                         />
                      </div>
                 </div>
-                <div className="max-h-96 overflow-y-auto">
+                <div className="max-h-[500px] overflow-y-auto">
                     {filteredBookings.length === 0 ? (
                         <div className="p-8 text-center text-gray-400">No data found for this date.</div>
                     ) : (
-                        filteredBookings.map(b => (
-                            <div key={b.id} className="p-4 border-b border-gray-50 hover:bg-gray-50">
-                                <div className="flex justify-between mb-1">
-                                    <span className="font-bold text-gray-800">{b.userName}</span>
-                                    <span className={`text-xs font-bold px-2 py-1 rounded ${
-                                        b.status === BookingStatus.COMPLETED ? 'bg-green-100 text-green-700' : 
-                                        b.status === BookingStatus.CANCELLED ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
-                                    }`}>
-                                        {b.status}
-                                    </span>
+                        <>
+                            {/* Morning Section */}
+                            {groupedByPeriod.morning.length > 0 && (
+                                <div>
+                                    <div className="sticky top-0 bg-blue-600 text-white px-4 py-2 flex justify-between items-center">
+                                        <div className="flex items-center gap-2">
+                                            <Sun size={16} />
+                                            <span className="font-bold text-sm">ช่วงเช้า (Morning)</span>
+                                        </div>
+                                        <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">{groupedByPeriod.morning.length} คน</span>
+                                    </div>
+                                    {groupedByPeriod.morning.map(b => (
+                                        <div key={b.id} className="p-4 border-b border-gray-50 hover:bg-blue-50">
+                                            <div className="flex justify-between mb-1">
+                                                <span className="font-bold text-gray-800">{b.userName}</span>
+                                                <span className={`text-xs font-bold px-2 py-1 rounded ${
+                                                    b.status === BookingStatus.COMPLETED ? 'bg-green-100 text-green-700' :
+                                                    b.status === BookingStatus.CANCELLED ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
+                                                }`}>
+                                                    {b.status}
+                                                </span>
+                                            </div>
+                                            <div className="text-xs text-gray-500">{b.routeName} • {b.stationName}</div>
+                                        </div>
+                                    ))}
                                 </div>
-                                <div className="text-xs text-gray-500">
-                                    {b.routeName} • {b.stationName}
+                            )}
+
+                            {/* Evening Section */}
+                            {groupedByPeriod.evening.length > 0 && (
+                                <div>
+                                    <div className="sticky top-0 bg-orange-500 text-white px-4 py-2 flex justify-between items-center">
+                                        <div className="flex items-center gap-2">
+                                            <Sunset size={16} />
+                                            <span className="font-bold text-sm">ช่วงเย็น (Evening)</span>
+                                        </div>
+                                        <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">{groupedByPeriod.evening.length} คน</span>
+                                    </div>
+                                    {groupedByPeriod.evening.map(b => (
+                                        <div key={b.id} className="p-4 border-b border-gray-50 hover:bg-orange-50">
+                                            <div className="flex justify-between mb-1">
+                                                <span className="font-bold text-gray-800">{b.userName}</span>
+                                                <span className={`text-xs font-bold px-2 py-1 rounded ${
+                                                    b.status === BookingStatus.COMPLETED ? 'bg-green-100 text-green-700' :
+                                                    b.status === BookingStatus.CANCELLED ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
+                                                }`}>
+                                                    {b.status}
+                                                </span>
+                                            </div>
+                                            <div className="text-xs text-gray-500">{b.routeName} • {b.stationName}</div>
+                                        </div>
+                                    ))}
                                 </div>
-                                <div className="text-[10px] text-gray-400 mt-1">
-                                    {new Date(b.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            )}
+
+                            {/* Night Section */}
+                            {groupedByPeriod.night.length > 0 && (
+                                <div>
+                                    <div className="sticky top-0 bg-indigo-700 text-white px-4 py-2 flex justify-between items-center">
+                                        <div className="flex items-center gap-2">
+                                            <Moon size={16} />
+                                            <span className="font-bold text-sm">ช่วงดึก (Night)</span>
+                                        </div>
+                                        <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">{groupedByPeriod.night.length} คน</span>
+                                    </div>
+                                    {groupedByPeriod.night.map(b => (
+                                        <div key={b.id} className="p-4 border-b border-gray-50 hover:bg-indigo-50">
+                                            <div className="flex justify-between mb-1">
+                                                <span className="font-bold text-gray-800">{b.userName}</span>
+                                                <span className={`text-xs font-bold px-2 py-1 rounded ${
+                                                    b.status === BookingStatus.COMPLETED ? 'bg-green-100 text-green-700' :
+                                                    b.status === BookingStatus.CANCELLED ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
+                                                }`}>
+                                                    {b.status}
+                                                </span>
+                                            </div>
+                                            <div className="text-xs text-gray-500">{b.routeName} • {b.stationName}</div>
+                                        </div>
+                                    ))}
                                 </div>
-                            </div>
-                        ))
+                            )}
+                        </>
                     )}
                 </div>
             </div>
