@@ -1,5 +1,5 @@
-import { User, Booking, RouteOption, BookingStatus, UserRole } from '../types';
-import { ROUTES_DATA } from '../constants';
+import { User, Booking, RouteOption, Station, BookingStatus, UserRole } from '../types';
+import { ROUTES_DATA, STATIONS_DATA } from '../constants';
 import { supabase } from '../lib/supabase';
 
 const KEYS = {
@@ -102,15 +102,38 @@ export const loginAuth = async (empId: string): Promise<User | null> => {
   }
 };
 
-// --- Route Management (Constants + Supabase for details) ---
+// --- Route Management (Supabase + Constants fallback) ---
 export const getRoutes = async (): Promise<RouteOption[]> => {
   try {
-    // ดึงข้อมูล route_details จาก Supabase
+    // ดึงข้อมูลจาก Supabase routes table
+    const { data: routesData } = await supabase
+      .from('routes')
+      .select('*')
+      .order('time', { ascending: true });
+
+    // ดึงข้อมูล route_details สำหรับ licensePlate และ driverPhone
     const { data: details } = await supabase
       .from('route_details')
       .select('*');
 
-    // Merge กับ constants
+    // ถ้ามีข้อมูลใน Supabase ใช้ข้อมูลนั้น
+    if (routesData && routesData.length > 0) {
+      return routesData.map(r => {
+        const detail = details?.find(d => d.route_id === r.id);
+        return {
+          id: r.id,
+          name: r.name,
+          time: r.time,
+          type: r.type as 'morning' | 'evening' | 'night',
+          description: r.description || undefined,
+          maxSeats: r.max_seats || 40,
+          licensePlate: detail?.license_plate || undefined,
+          driverPhone: detail?.driver_phone || undefined,
+        };
+      });
+    }
+
+    // Fallback to constants
     return ROUTES_DATA.map(route => {
       const detail = details?.find(d => d.route_id === route.id);
       if (detail) {
@@ -165,6 +188,122 @@ export const saveRoutes = async (routes: RouteOption[]): Promise<void> => {
 export const getRouteById = async (id: string): Promise<RouteOption | undefined> => {
   const routes = await getRoutes();
   return routes.find(r => r.id === id);
+};
+
+// สร้าง/อัพเดท route
+export const saveRoute = async (route: RouteOption): Promise<boolean> => {
+  try {
+    const { data: existing } = await supabase
+      .from('routes')
+      .select('id')
+      .eq('id', route.id)
+      .single();
+
+    if (existing) {
+      await supabase
+        .from('routes')
+        .update({
+          name: route.name,
+          time: route.time,
+          type: route.type,
+          description: route.description || null,
+          max_seats: route.maxSeats,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', route.id);
+    } else {
+      await supabase.from('routes').insert({
+        id: route.id,
+        name: route.name,
+        time: route.time,
+        type: route.type,
+        description: route.description || null,
+        max_seats: route.maxSeats,
+      });
+    }
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+// ลบ route
+export const deleteRoute = async (routeId: string): Promise<boolean> => {
+  try {
+    await supabase.from('routes').delete().eq('id', routeId);
+    await supabase.from('route_details').delete().eq('route_id', routeId);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+// --- Station Management (Supabase + Constants fallback) ---
+export const getStations = async (): Promise<Station[]> => {
+  try {
+    const { data } = await supabase
+      .from('stations')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (data && data.length > 0) {
+      return data.map(s => ({
+        id: s.id,
+        name: s.name,
+        lat: s.lat,
+        lng: s.lng,
+        description: s.description || '',
+      }));
+    }
+    return STATIONS_DATA;
+  } catch {
+    return STATIONS_DATA;
+  }
+};
+
+// สร้าง/อัพเดท station
+export const saveStation = async (station: Station): Promise<boolean> => {
+  try {
+    const { data: existing } = await supabase
+      .from('stations')
+      .select('id')
+      .eq('id', station.id)
+      .single();
+
+    if (existing) {
+      await supabase
+        .from('stations')
+        .update({
+          name: station.name,
+          lat: station.lat,
+          lng: station.lng,
+          description: station.description,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', station.id);
+    } else {
+      await supabase.from('stations').insert({
+        id: station.id,
+        name: station.name,
+        lat: station.lat,
+        lng: station.lng,
+        description: station.description,
+      });
+    }
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+// ลบ station
+export const deleteStation = async (stationId: string): Promise<boolean> => {
+  try {
+    await supabase.from('stations').delete().eq('id', stationId);
+    return true;
+  } catch {
+    return false;
+  }
 };
 
 // --- News Management (Supabase) ---

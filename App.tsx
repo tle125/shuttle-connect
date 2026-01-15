@@ -11,7 +11,7 @@ import Swal from 'sweetalert2';
 
 import { User, UserRole, RouteOption, Station, Booking, BookingStatus, Language } from './types';
 import { STATIONS_DATA, TRANSLATIONS } from './constants';
-import { getStoredUser, saveUser, logoutUser, getBookings, saveBooking, updateBookingStatus, getUserActiveBooking, getRouteSeatCount, registerUser, loginAuth, getUserBookings, getRoutes, saveRoutes, getRouteById, getNews, saveNews } from './services/dataService';
+import { getStoredUser, saveUser, logoutUser, getBookings, saveBooking, updateBookingStatus, getUserActiveBooking, getRouteSeatCount, registerUser, loginAuth, getUserBookings, getRoutes, saveRoutes, getRouteById, getNews, saveNews, saveRoute, deleteRoute, getStations, saveStation, deleteStation } from './services/dataService';
 import MapComponent from './components/MapComponent';
 import QRCodeGen from './components/QRCodeGen';
 
@@ -910,38 +910,43 @@ const AdminDashboard = ({ lang, toggleLang }: any) => {
     const [scanMode, setScanMode] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [routes, setRoutes] = useState<RouteOption[]>([]);
+    const [stations, setStations] = useState<Station[]>([]);
     const [isManageVehicles, setIsManageVehicles] = useState(false);
+    const [isManageRoutes, setIsManageRoutes] = useState(false);
     const [currentDate, setCurrentDate] = useState(new Date());
     const [lastScanned, setLastScanned] = useState<string | null>(null);
     const [newsContent, setNewsContent] = useState('');
 
-    // Load bookings, news and routes from Supabase
+    // Load bookings, news, routes and stations from Supabase
     const loadData = async () => {
-        const [bookingsData, newsData, routesData] = await Promise.all([
+        const [bookingsData, newsData, routesData, stationsData] = await Promise.all([
             getBookings(),
             getNews(),
-            getRoutes()
+            getRoutes(),
+            getStations()
         ]);
         setBookings(bookingsData);
         setNewsContent(newsData);
         setRoutes(routesData);
+        setStations(stationsData);
     };
 
     useEffect(() => {
         loadData();
     }, []);
 
-    // Refresh routes when exiting manage vehicles
-    const loadRoutes = async () => {
-        const routesData = await getRoutes();
+    // Refresh routes and stations when exiting manage screens
+    const loadRoutesAndStations = async () => {
+        const [routesData, stationsData] = await Promise.all([getRoutes(), getStations()]);
         setRoutes(routesData);
+        setStations(stationsData);
     };
 
     useEffect(() => {
-        if (!isManageVehicles) {
-            loadRoutes();
+        if (!isManageVehicles && !isManageRoutes) {
+            loadRoutesAndStations();
         }
-    }, [isManageVehicles]);
+    }, [isManageVehicles, isManageRoutes]);
 
     const navigateDate = (days: number) => {
         const next = new Date(currentDate);
@@ -1081,7 +1086,277 @@ const AdminDashboard = ({ lang, toggleLang }: any) => {
 
         return groups;
     }, [filteredBookings, routes]);
-    
+
+    // Route/Station management handlers
+    const handleAddRoute = async () => {
+        const { value: formValues } = await Swal.fire({
+            title: 'เพิ่มสายรถใหม่',
+            html: `
+                <input id="swal-name" class="swal2-input" placeholder="ชื่อสาย เช่น สายอยุธยา (รับเช้า)">
+                <input id="swal-time" class="swal2-input" placeholder="เวลา เช่น 06:00">
+                <select id="swal-type" class="swal2-select">
+                    <option value="morning">ช่วงเช้า (Morning)</option>
+                    <option value="evening">ช่วงเย็น (Evening)</option>
+                    <option value="night">ช่วงดึก (Night)</option>
+                </select>
+                <input id="swal-seats" class="swal2-input" type="number" placeholder="จำนวนที่นั่ง เช่น 40" value="40">
+                <input id="swal-desc" class="swal2-input" placeholder="รายละเอียด (ไม่บังคับ)">
+            `,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: 'บันทึก',
+            cancelButtonText: 'ยกเลิก',
+            preConfirm: () => {
+                const name = (document.getElementById('swal-name') as HTMLInputElement).value;
+                const time = (document.getElementById('swal-time') as HTMLInputElement).value;
+                const type = (document.getElementById('swal-type') as HTMLSelectElement).value;
+                const seats = parseInt((document.getElementById('swal-seats') as HTMLInputElement).value) || 40;
+                const desc = (document.getElementById('swal-desc') as HTMLInputElement).value;
+                if (!name || !time) {
+                    Swal.showValidationMessage('กรุณากรอกชื่อสายและเวลา');
+                    return false;
+                }
+                return { name, time, type, seats, desc };
+            }
+        });
+        if (formValues) {
+            const newRoute: RouteOption = {
+                id: `r${Date.now()}`,
+                name: formValues.name,
+                time: formValues.time,
+                type: formValues.type as 'morning' | 'evening' | 'night',
+                maxSeats: formValues.seats,
+                description: formValues.desc || undefined
+            };
+            await saveRoute(newRoute);
+            setRoutes(prev => [...prev, newRoute]);
+            Swal.fire({ icon: 'success', text: 'เพิ่มสายรถสำเร็จ', timer: 1500, showConfirmButton: false });
+        }
+    };
+
+    const handleEditRoute = async (route: RouteOption) => {
+        const { value: formValues } = await Swal.fire({
+            title: 'แก้ไขสายรถ',
+            html: `
+                <input id="swal-name" class="swal2-input" placeholder="ชื่อสาย" value="${route.name}">
+                <input id="swal-time" class="swal2-input" placeholder="เวลา" value="${route.time}">
+                <select id="swal-type" class="swal2-select">
+                    <option value="morning" ${route.type === 'morning' ? 'selected' : ''}>ช่วงเช้า (Morning)</option>
+                    <option value="evening" ${route.type === 'evening' ? 'selected' : ''}>ช่วงเย็น (Evening)</option>
+                    <option value="night" ${route.type === 'night' ? 'selected' : ''}>ช่วงดึก (Night)</option>
+                </select>
+                <input id="swal-seats" class="swal2-input" type="number" placeholder="จำนวนที่นั่ง" value="${route.maxSeats}">
+                <input id="swal-desc" class="swal2-input" placeholder="รายละเอียด" value="${route.description || ''}">
+            `,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: 'บันทึก',
+            cancelButtonText: 'ยกเลิก',
+            preConfirm: () => {
+                const name = (document.getElementById('swal-name') as HTMLInputElement).value;
+                const time = (document.getElementById('swal-time') as HTMLInputElement).value;
+                const type = (document.getElementById('swal-type') as HTMLSelectElement).value;
+                const seats = parseInt((document.getElementById('swal-seats') as HTMLInputElement).value) || 40;
+                const desc = (document.getElementById('swal-desc') as HTMLInputElement).value;
+                if (!name || !time) {
+                    Swal.showValidationMessage('กรุณากรอกชื่อสายและเวลา');
+                    return false;
+                }
+                return { name, time, type, seats, desc };
+            }
+        });
+        if (formValues) {
+            const updatedRoute: RouteOption = {
+                ...route,
+                name: formValues.name,
+                time: formValues.time,
+                type: formValues.type as 'morning' | 'evening' | 'night',
+                maxSeats: formValues.seats,
+                description: formValues.desc || undefined
+            };
+            await saveRoute(updatedRoute);
+            setRoutes(prev => prev.map(r => r.id === route.id ? updatedRoute : r));
+            Swal.fire({ icon: 'success', text: 'แก้ไขสายรถสำเร็จ', timer: 1500, showConfirmButton: false });
+        }
+    };
+
+    const handleDeleteRoute = async (route: RouteOption) => {
+        const result = await Swal.fire({
+            title: 'ยืนยันการลบ',
+            text: `ต้องการลบสาย "${route.name}" หรือไม่?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'ลบ',
+            cancelButtonText: 'ยกเลิก'
+        });
+        if (result.isConfirmed) {
+            await deleteRoute(route.id);
+            setRoutes(prev => prev.filter(r => r.id !== route.id));
+            Swal.fire({ icon: 'success', text: 'ลบสายรถสำเร็จ', timer: 1500, showConfirmButton: false });
+        }
+    };
+
+    const handleAddStation = async () => {
+        const { value: formValues } = await Swal.fire({
+            title: 'เพิ่มจุดจอดใหม่',
+            html: `
+                <input id="swal-name" class="swal2-input" placeholder="ชื่อจุดจอด เช่น ตลาดรังสิต">
+                <input id="swal-lat" class="swal2-input" type="number" step="0.0001" placeholder="Latitude เช่น 13.9897">
+                <input id="swal-lng" class="swal2-input" type="number" step="0.0001" placeholder="Longitude เช่น 100.6177">
+                <input id="swal-desc" class="swal2-input" placeholder="รายละเอียด เช่น ป้ายรถเมล์หน้าตลาด">
+            `,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: 'บันทึก',
+            cancelButtonText: 'ยกเลิก',
+            preConfirm: () => {
+                const name = (document.getElementById('swal-name') as HTMLInputElement).value;
+                const lat = parseFloat((document.getElementById('swal-lat') as HTMLInputElement).value);
+                const lng = parseFloat((document.getElementById('swal-lng') as HTMLInputElement).value);
+                const desc = (document.getElementById('swal-desc') as HTMLInputElement).value;
+                if (!name || isNaN(lat) || isNaN(lng)) {
+                    Swal.showValidationMessage('กรุณากรอกชื่อและพิกัด');
+                    return false;
+                }
+                return { name, lat, lng, desc };
+            }
+        });
+        if (formValues) {
+            const newStation: Station = {
+                id: `s${Date.now()}`,
+                name: formValues.name,
+                lat: formValues.lat,
+                lng: formValues.lng,
+                description: formValues.desc || ''
+            };
+            await saveStation(newStation);
+            setStations(prev => [...prev, newStation]);
+            Swal.fire({ icon: 'success', text: 'เพิ่มจุดจอดสำเร็จ', timer: 1500, showConfirmButton: false });
+        }
+    };
+
+    const handleEditStation = async (station: Station) => {
+        const { value: formValues } = await Swal.fire({
+            title: 'แก้ไขจุดจอด',
+            html: `
+                <input id="swal-name" class="swal2-input" placeholder="ชื่อจุดจอด" value="${station.name}">
+                <input id="swal-lat" class="swal2-input" type="number" step="0.0001" placeholder="Latitude" value="${station.lat}">
+                <input id="swal-lng" class="swal2-input" type="number" step="0.0001" placeholder="Longitude" value="${station.lng}">
+                <input id="swal-desc" class="swal2-input" placeholder="รายละเอียด" value="${station.description}">
+            `,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: 'บันทึก',
+            cancelButtonText: 'ยกเลิก',
+            preConfirm: () => {
+                const name = (document.getElementById('swal-name') as HTMLInputElement).value;
+                const lat = parseFloat((document.getElementById('swal-lat') as HTMLInputElement).value);
+                const lng = parseFloat((document.getElementById('swal-lng') as HTMLInputElement).value);
+                const desc = (document.getElementById('swal-desc') as HTMLInputElement).value;
+                if (!name || isNaN(lat) || isNaN(lng)) {
+                    Swal.showValidationMessage('กรุณากรอกชื่อและพิกัด');
+                    return false;
+                }
+                return { name, lat, lng, desc };
+            }
+        });
+        if (formValues) {
+            const updatedStation: Station = {
+                ...station,
+                name: formValues.name,
+                lat: formValues.lat,
+                lng: formValues.lng,
+                description: formValues.desc || ''
+            };
+            await saveStation(updatedStation);
+            setStations(prev => prev.map(s => s.id === station.id ? updatedStation : s));
+            Swal.fire({ icon: 'success', text: 'แก้ไขจุดจอดสำเร็จ', timer: 1500, showConfirmButton: false });
+        }
+    };
+
+    const handleDeleteStation = async (station: Station) => {
+        const result = await Swal.fire({
+            title: 'ยืนยันการลบ',
+            text: `ต้องการลบจุดจอด "${station.name}" หรือไม่?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'ลบ',
+            cancelButtonText: 'ยกเลิก'
+        });
+        if (result.isConfirmed) {
+            await deleteStation(station.id);
+            setStations(prev => prev.filter(s => s.id !== station.id));
+            Swal.fire({ icon: 'success', text: 'ลบจุดจอดสำเร็จ', timer: 1500, showConfirmButton: false });
+        }
+    };
+
+    // Manage Routes/Stations screen
+    if (isManageRoutes) {
+        return (
+            <div className="p-4 pb-24 h-full flex flex-col">
+                <div className="flex items-center gap-3 mb-6 bg-white p-2 pr-6 rounded-full shadow-sm w-fit">
+                    <button onClick={() => setIsManageRoutes(false)} className="p-2 bg-gray-100 rounded-full text-gray-700 hover:bg-gray-200 transition-colors">
+                        <ArrowLeft size={20} />
+                    </button>
+                    <h2 className="font-bold text-gray-900 text-lg">จัดการสายรถ & จุดจอด</h2>
+                </div>
+
+                <div className="flex-1 overflow-y-auto no-scrollbar space-y-6 pb-4">
+                    {/* Routes Section */}
+                    <div>
+                        <div className="flex justify-between items-center mb-3">
+                            <h3 className="font-bold text-gray-800 flex items-center gap-2"><Bus size={18} /> สายรถ ({routes.length})</h3>
+                            <button onClick={handleAddRoute} className="flex items-center gap-1 text-sm bg-teal-600 text-white px-3 py-1.5 rounded-lg hover:bg-teal-700">
+                                <PlusCircle size={16} /> เพิ่มสาย
+                            </button>
+                        </div>
+                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                            {routes.map(route => (
+                                <div key={route.id} className="bg-white p-3 rounded-lg shadow-sm border border-gray-100 flex justify-between items-center">
+                                    <div>
+                                        <div className="font-medium text-gray-800">{route.name}</div>
+                                        <div className="text-xs text-gray-500">{route.time} • {route.type} • {route.maxSeats} ที่นั่ง</div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => handleEditRoute(route)} className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200"><Edit size={16} /></button>
+                                        <button onClick={() => handleDeleteRoute(route)} className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"><X size={16} /></button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Stations Section */}
+                    <div>
+                        <div className="flex justify-between items-center mb-3">
+                            <h3 className="font-bold text-gray-800 flex items-center gap-2"><MapIcon size={18} /> จุดจอด ({stations.length})</h3>
+                            <button onClick={handleAddStation} className="flex items-center gap-1 text-sm bg-teal-600 text-white px-3 py-1.5 rounded-lg hover:bg-teal-700">
+                                <PlusCircle size={16} /> เพิ่มจุดจอด
+                            </button>
+                        </div>
+                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                            {stations.map(station => (
+                                <div key={station.id} className="bg-white p-3 rounded-lg shadow-sm border border-gray-100 flex justify-between items-center">
+                                    <div>
+                                        <div className="font-medium text-gray-800">{station.name}</div>
+                                        <div className="text-xs text-gray-500">{station.description}</div>
+                                        <div className="text-[10px] text-gray-400">📍 {station.lat.toFixed(4)}, {station.lng.toFixed(4)}</div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => handleEditStation(station)} className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200"><Edit size={16} /></button>
+                                        <button onClick={() => handleDeleteStation(station)} className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"><X size={16} /></button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     if (isManageVehicles) {
         return (
             <div className="p-4 pb-24 h-full flex flex-col">
@@ -1201,8 +1476,11 @@ const AdminDashboard = ({ lang, toggleLang }: any) => {
                 <Button onClick={exportData} variant="secondary">
                     <Settings size={18} /> {t.export}
                 </Button>
-                <Button onClick={() => setIsManageVehicles(true)} className="col-span-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200">
-                    <Truck size={18} /> Manage Vehicle & Driver
+                <Button onClick={() => setIsManageVehicles(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200">
+                    <Truck size={18} /> จัดการรถ
+                </Button>
+                <Button onClick={() => setIsManageRoutes(true)} className="bg-purple-600 hover:bg-purple-700 text-white shadow-purple-200">
+                    <MapIcon size={18} /> จัดการสายรถ
                 </Button>
             </div>
 
