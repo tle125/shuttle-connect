@@ -1270,9 +1270,13 @@ const AdminDashboard = ({ lang, toggleLang }: any) => {
                 lng: formValues.lng,
                 description: formValues.desc || ''
             };
-            await saveStation(newStation);
-            setStations(prev => [...prev, newStation]);
-            Swal.fire({ icon: 'success', text: 'เพิ่มจุดจอดสำเร็จ', timer: 1500, showConfirmButton: false });
+            const saved = await saveStation(newStation);
+            if (saved) {
+                setStations(prev => [...prev, newStation]);
+                Swal.fire({ icon: 'success', text: 'เพิ่มจุดจอดสำเร็จ', timer: 1500, showConfirmButton: false });
+            } else {
+                Swal.fire({ icon: 'error', text: 'บันทึกจุดจอดไม่สำเร็จ กรุณาลองใหม่', timer: 2000, showConfirmButton: false });
+            }
         }
     };
 
@@ -1311,9 +1315,13 @@ const AdminDashboard = ({ lang, toggleLang }: any) => {
                 lng: formValues.lng,
                 description: formValues.desc || ''
             };
-            await saveStation(updatedStation);
-            setStations(prev => prev.map(s => s.id === station.id ? updatedStation : s));
-            Swal.fire({ icon: 'success', text: 'แก้ไขจุดจอดสำเร็จ', timer: 1500, showConfirmButton: false });
+            const saved = await saveStation(updatedStation);
+            if (saved) {
+                setStations(prev => prev.map(s => s.id === station.id ? updatedStation : s));
+                Swal.fire({ icon: 'success', text: 'แก้ไขจุดจอดสำเร็จ', timer: 1500, showConfirmButton: false });
+            } else {
+                Swal.fire({ icon: 'error', text: 'บันทึกการแก้ไขไม่สำเร็จ กรุณาลองใหม่', timer: 2000, showConfirmButton: false });
+            }
         }
     };
 
@@ -1328,9 +1336,13 @@ const AdminDashboard = ({ lang, toggleLang }: any) => {
             cancelButtonText: 'ยกเลิก'
         });
         if (result.isConfirmed) {
-            await deleteStation(station.id);
-            setStations(prev => prev.filter(s => s.id !== station.id));
-            Swal.fire({ icon: 'success', text: 'ลบจุดจอดสำเร็จ', timer: 1500, showConfirmButton: false });
+            const deleted = await deleteStation(station.id);
+            if (deleted) {
+                setStations(prev => prev.filter(s => s.id !== station.id));
+                Swal.fire({ icon: 'success', text: 'ลบจุดจอดสำเร็จ', timer: 1500, showConfirmButton: false });
+            } else {
+                Swal.fire({ icon: 'error', text: 'ลบจุดจอดไม่สำเร็จ กรุณาลองใหม่', timer: 2000, showConfirmButton: false });
+            }
         }
     };
 

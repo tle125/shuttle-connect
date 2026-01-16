@@ -264,14 +264,14 @@ export const getStations = async (): Promise<Station[]> => {
 // สร้าง/อัพเดท station
 export const saveStation = async (station: Station): Promise<boolean> => {
   try {
-    const { data: existing } = await supabase
+    const { data: existing, error: checkError } = await supabase
       .from('stations')
       .select('id')
       .eq('id', station.id)
       .single();
 
     if (existing) {
-      await supabase
+      const { error } = await supabase
         .from('stations')
         .update({
           name: station.name,
@@ -281,17 +281,26 @@ export const saveStation = async (station: Station): Promise<boolean> => {
           updated_at: new Date().toISOString()
         })
         .eq('id', station.id);
+      if (error) {
+        console.error('Error updating station:', error);
+        return false;
+      }
     } else {
-      await supabase.from('stations').insert({
+      const { error } = await supabase.from('stations').insert({
         id: station.id,
         name: station.name,
         lat: station.lat,
         lng: station.lng,
         description: station.description,
       });
+      if (error) {
+        console.error('Error inserting station:', error);
+        return false;
+      }
     }
     return true;
-  } catch {
+  } catch (error) {
+    console.error('Error in saveStation:', error);
     return false;
   }
 };
