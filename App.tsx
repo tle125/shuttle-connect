@@ -1458,6 +1458,18 @@ const AdminDashboard = ({ lang, toggleLang }: any) => {
     }
 
     if (isManageVehicles) {
+        // Group routes by name, then by time
+        const groupedRoutes = routes.reduce((acc: Record<string, Record<string, typeof routes>>, route) => {
+            if (!acc[route.name]) {
+                acc[route.name] = {};
+            }
+            if (!acc[route.name][route.time]) {
+                acc[route.name][route.time] = [];
+            }
+            acc[route.name][route.time].push(route);
+            return acc;
+        }, {});
+
         return (
             <div className="p-4 pb-24 h-full flex flex-col">
                 <div className="flex items-center gap-3 mb-6 bg-white p-2 pr-6 rounded-full shadow-sm w-fit">
@@ -1468,32 +1480,43 @@ const AdminDashboard = ({ lang, toggleLang }: any) => {
                 </div>
                 
                 <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pb-4">
-                    {routes.map(route => (
-                        <div key={route.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                             <div className="flex justify-between items-start mb-3">
-                                <h3 className="font-bold text-gray-800">{route.name}</h3>
-                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded font-mono">{route.time}</span>
-                             </div>
-                             <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block text-xs text-gray-500 mb-1">License Plate</label>
-                                    <input 
-                                        className="w-full border rounded p-2 text-sm bg-gray-50 text-gray-900 placeholder-gray-400 border-gray-300 focus:border-blue-500 outline-none"
-                                        value={route.licensePlate || ''}
-                                        onChange={(e) => handleRouteUpdate(route.id, 'licensePlate', e.target.value)}
-                                        placeholder="e.g. 1AB-1234"
-                                    />
+                    {Object.keys(groupedRoutes).sort().map(routeName => (
+                        <div key={routeName} className="space-y-2">
+                            {/* Route Group Header */}
+                            <h3 className="font-bold text-gray-900 text-base px-1">{routeName}</h3>
+                            
+                            {/* Time Groups */}
+                            {Object.keys(groupedRoutes[routeName]).sort().map(time => (
+                                <div key={`${routeName}-${time}`} className="space-y-2">
+                                    {groupedRoutes[routeName][time].map(route => (
+                                        <div key={route.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 ml-2">
+                                            <div className="flex justify-between items-start mb-3">
+                                                <span className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded font-mono">{route.time}</span>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label className="block text-xs text-gray-500 mb-1">License Plate</label>
+                                                    <input 
+                                                        className="w-full border rounded p-2 text-sm bg-gray-50 text-gray-900 placeholder-gray-400 border-gray-300 focus:border-blue-500 outline-none"
+                                                        value={route.licensePlate || ''}
+                                                        onChange={(e) => handleRouteUpdate(route.id, 'licensePlate', e.target.value)}
+                                                        placeholder="e.g. 1AB-1234"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs text-gray-500 mb-1">Driver Phone</label>
+                                                    <input 
+                                                        className="w-full border rounded p-2 text-sm bg-gray-50 text-gray-900 placeholder-gray-400 border-gray-300 focus:border-blue-500 outline-none"
+                                                        value={route.driverPhone || ''}
+                                                        onChange={(e) => handleRouteUpdate(route.id, 'driverPhone', e.target.value)}
+                                                        placeholder="08X-XXX-XXXX"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
-                                <div>
-                                    <label className="block text-xs text-gray-500 mb-1">Driver Phone</label>
-                                    <input 
-                                        className="w-full border rounded p-2 text-sm bg-gray-50 text-gray-900 placeholder-gray-400 border-gray-300 focus:border-blue-500 outline-none"
-                                        value={route.driverPhone || ''}
-                                        onChange={(e) => handleRouteUpdate(route.id, 'driverPhone', e.target.value)}
-                                        placeholder="08X-XXX-XXXX"
-                                    />
-                                </div>
-                             </div>
+                            ))}
                         </div>
                     ))}
                 </div>
