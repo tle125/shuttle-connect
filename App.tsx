@@ -1268,6 +1268,11 @@ const AdminDashboard = ({ lang, toggleLang }: any) => {
             };
             await saveRoute(updatedRoute);
             setRoutes(prev => prev.map(r => r.id === route.id ? updatedRoute : r));
+            
+            // Reload routes from server to ensure stationIds are persisted correctly
+            const refreshedRoutes = await getRoutes();
+            setRoutes(refreshedRoutes);
+            
             Swal.fire({ icon: 'success', text: `บันทึกจุดจอดของ ${route.name} สำเร็จ (${confirmed.length} จุด)`, timer: 1500, showConfirmButton: false });
         }
     };
@@ -1729,7 +1734,9 @@ const BookingFlow = ({ user, lang }: any) => {
     const nightRoutes = routes.filter(r => r.type === 'night');
 
     const handleRouteSelect = (route: RouteOption, dir: 'inbound' | 'outbound') => {
-        setSelectedRoute(route);
+        // ดึง route ล่าสุด จาก state routes เพื่อให้ stationIds ถูกต้อง
+        const latestRoute = routes.find(r => r.id === route.id) || route;
+        setSelectedRoute(latestRoute);
         setDirection(dir);
         setStep(2);
     };
