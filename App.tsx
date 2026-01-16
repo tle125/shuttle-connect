@@ -1509,7 +1509,7 @@ const AdminDashboard = ({ lang, toggleLang }: any) => {
                     {isToday(currentDate) ? <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Today</span> : <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">History</span>}
                 </h3>
                 {stats.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="80%">
+                    <ResponsiveContainer width="100%" height={200}>
                         <BarChart data={stats}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} />
                             <XAxis dataKey="name" tick={{fontSize: 10}} />
@@ -1975,13 +1975,15 @@ const MapPage = ({ lang, user, toggleLang }: any) => {
         };
         loadStations();
 
+        // Request user location with proper error handling
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     setUserLocation([position.coords.latitude, position.coords.longitude]);
                 },
                 (error) => {
-                    console.error("Error getting location", error);
+                    console.warn("Geolocation error:", error.message);
+                    // Silently fail - location is optional for adding stations
                 }
             );
         }
