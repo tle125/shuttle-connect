@@ -1126,11 +1126,48 @@ const AdminDashboard = ({ lang, toggleLang }: any) => {
                 time: formValues.time,
                 type: formValues.type as 'morning' | 'evening' | 'night',
                 maxSeats: formValues.seats,
-                description: formValues.desc || undefined
+                description: formValues.desc || undefined,
+                stationIds: []
             };
             await saveRoute(newRoute);
             setRoutes(prev => [...prev, newRoute]);
-            Swal.fire({ icon: 'success', text: 'เพิ่มสายรถสำเร็จ', timer: 1500, showConfirmButton: false });
+            
+            // Now ask to select stations
+            const stationCheckboxes = stations.map(s => {
+                return `<label class="flex items-center gap-2 p-2 hover:bg-gray-100 rounded cursor-pointer">
+                    <input type="checkbox" class="station-checkbox" value="${s.id}">
+                    <span>${s.name}</span>
+                </label>`;
+            }).join('');
+
+            const { value: selectedStations } = await Swal.fire({
+                title: `เลือกจุดขึ้นสำหรับ "${newRoute.name}"`,
+                html: `
+                    <div class="text-left max-h-64 overflow-y-auto">
+                        ${stations.length > 0 ? stationCheckboxes : '<p class="text-gray-500">ยังไม่มีจุดจอด กรุณาเพิ่มจุดจอดก่อน</p>'}
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'บันทึก',
+                cancelButtonText: 'ข้ามไป',
+                preConfirm: () => {
+                    const checkboxes = document.querySelectorAll('.station-checkbox:checked') as NodeListOf<HTMLInputElement>;
+                    const selectedIds = Array.from(checkboxes).map(cb => cb.value);
+                    return selectedIds;
+                }
+            });
+
+            if (selectedStations !== undefined && selectedStations.length > 0) {
+                const updatedRoute: RouteOption = {
+                    ...newRoute,
+                    stationIds: selectedStations
+                };
+                await saveRoute(updatedRoute);
+                setRoutes(prev => prev.map(r => r.id === newRoute.id ? updatedRoute : r));
+                Swal.fire({ icon: 'success', text: `เพิ่มสายรถสำเร็จ (${selectedStations.length} จุด)`, timer: 1500, showConfirmButton: false });
+            } else {
+                Swal.fire({ icon: 'info', text: 'เพิ่มสายรถสำเร็จ (ยังไม่มีจุดขึ้น)', timer: 1500, showConfirmButton: false });
+            }
         }
     };
 
