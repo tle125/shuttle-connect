@@ -118,7 +118,7 @@ export const getRoutes = async (): Promise<RouteOption[]> => {
 
     // ถ้ามีข้อมูลใน Supabase ใช้ข้อมูลนั้น
     if (routesData && routesData.length > 0) {
-      return routesData.map(r => {
+      const routes = routesData.map(r => {
         const detail = details?.find(d => d.route_id === r.id);
         const stationIds = r.station_ids ? (Array.isArray(r.station_ids) ? r.station_ids : JSON.parse(r.station_ids)) : undefined;
         return {
@@ -133,6 +133,19 @@ export const getRoutes = async (): Promise<RouteOption[]> => {
           driverPhone: detail?.driver_phone || undefined,
         };
       });
+      // Cache to localStorage as backup
+      localStorage.setItem(KEYS.ROUTES, JSON.stringify(routes));
+      return routes;
+    }
+
+    // Fallback to localStorage if available
+    const stored = localStorage.getItem(KEYS.ROUTES);
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch {
+        // Fall through to constants
+      }
     }
 
     // Fallback to constants
@@ -147,7 +160,17 @@ export const getRoutes = async (): Promise<RouteOption[]> => {
       }
       return route;
     });
-  } catch {
+  } catch (error) {
+    console.warn('Error fetching routes from Supabase:', error);
+    // Try localStorage fallback
+    const stored = localStorage.getItem(KEYS.ROUTES);
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch {
+        return ROUTES_DATA;
+      }
+    }
     return ROUTES_DATA;
   }
 };
@@ -202,7 +225,7 @@ export const saveRoute = async (route: RouteOption): Promise<boolean> => {
       .single();
 
     if (existing) {
-      await supabase
+      const { error } = await supabase
         .from('routes')
         .update({
           name: route.name,
@@ -214,8 +237,9 @@ export const saveRoute = async (route: RouteOption): Promise<boolean> => {
           updated_at: new Date().toISOString()
         })
         .eq('id', route.id);
+      if (error) throw error;
     } else {
-      await supabase.from('routes').insert({
+      const { error } = await supabase.from('routes').insert({
         id: route.id,
         name: route.name,
         time: route.time,
@@ -224,10 +248,16 @@ export const saveRoute = async (route: RouteOption): Promise<boolean> => {
         max_seats: route.maxSeats,
         station_ids: route.stationIds ? JSON.stringify(route.stationIds) : null,
       });
+      if (error) throw error;
     }
     return true;
-  } catch {
-    return false;
+  } catch (error) {
+    console.error('Error saving route to Supabase:', error);
+    // Fallback: save to localStorage with all routes
+    const allRoutes = await getRoutes();
+    const updated = allRoutes.map(r => r.id === route.id ? route : r);
+    localStorage.setItem(KEYS.ROUTES, JSON.stringify(updated));
+    return true; // ถือว่าบันทึก fallback ได้
   }
 };
 
