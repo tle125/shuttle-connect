@@ -1238,7 +1238,7 @@ const AdminDashboard = ({ lang, toggleLang }: any) => {
         // สร้าง checkbox list ของ stations
         const stationCheckboxes = stations.map(s => {
             const isChecked = route.stationIds?.includes(s.id) || false;
-            return `<label class="flex items-center gap-2 p-2 hover:bg-gray-100 rounded cursor-pointer">
+            return `<label class="flex items-center gap-2 p-2 hover:bg-gray-100 rounded cursor-pointer station-item" data-name="${s.name.toLowerCase()}">
                 <input type="checkbox" class="station-checkbox" value="${s.id}" ${isChecked ? 'checked' : ''}>
                 <span>${s.name}</span>
             </label>`;
@@ -1247,13 +1247,31 @@ const AdminDashboard = ({ lang, toggleLang }: any) => {
         const { value: confirmed } = await Swal.fire({
             title: `จัดการจุดจอดของ "${route.name}"`,
             html: `
-                <div class="text-left max-h-64 overflow-y-auto">
+                <input id="station-search" type="text" placeholder="ค้นหาจุดจอด..." class="w-full px-3 py-2 border border-gray-300 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <div class="text-left max-h-64 overflow-y-auto" id="station-list">
                     ${stations.length > 0 ? stationCheckboxes : '<p class="text-gray-500">ยังไม่มีจุดจอด กรุณาเพิ่มจุดจอดก่อน</p>'}
                 </div>
             `,
             showCancelButton: true,
             confirmButtonText: 'บันทึก',
             cancelButtonText: 'ยกเลิก',
+            didOpen: () => {
+                // Add search functionality
+                const searchInput = document.getElementById('station-search') as HTMLInputElement;
+                const stationItems = document.querySelectorAll('.station-item') as NodeListOf<HTMLElement>;
+                
+                if (searchInput) {
+                    searchInput.addEventListener('input', (e) => {
+                        const query = (e.target as HTMLInputElement).value.toLowerCase();
+                        stationItems.forEach(item => {
+                            const name = item.getAttribute('data-name') || '';
+                            item.style.display = name.includes(query) ? '' : 'none';
+                        });
+                    });
+                    // Focus on search input
+                    searchInput.focus();
+                }
+            },
             preConfirm: () => {
                 const checkboxes = document.querySelectorAll('.station-checkbox:checked') as NodeListOf<HTMLInputElement>;
                 const selectedIds = Array.from(checkboxes).map(cb => cb.value);
