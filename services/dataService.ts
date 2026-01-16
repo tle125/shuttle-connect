@@ -120,6 +120,7 @@ export const getRoutes = async (): Promise<RouteOption[]> => {
     if (routesData && routesData.length > 0) {
       return routesData.map(r => {
         const detail = details?.find(d => d.route_id === r.id);
+        const stationIds = r.station_ids ? (Array.isArray(r.station_ids) ? r.station_ids : JSON.parse(r.station_ids)) : undefined;
         return {
           id: r.id,
           name: r.name,
@@ -127,6 +128,7 @@ export const getRoutes = async (): Promise<RouteOption[]> => {
           type: r.type as 'morning' | 'evening' | 'night',
           description: r.description || undefined,
           maxSeats: r.max_seats || 40,
+          stationIds: stationIds,
           licensePlate: detail?.license_plate || undefined,
           driverPhone: detail?.driver_phone || undefined,
         };
@@ -208,6 +210,7 @@ export const saveRoute = async (route: RouteOption): Promise<boolean> => {
           type: route.type,
           description: route.description || null,
           max_seats: route.maxSeats,
+          station_ids: route.stationIds ? JSON.stringify(route.stationIds) : null,
           updated_at: new Date().toISOString()
         })
         .eq('id', route.id);
@@ -219,6 +222,7 @@ export const saveRoute = async (route: RouteOption): Promise<boolean> => {
         type: route.type,
         description: route.description || null,
         max_seats: route.maxSeats,
+        station_ids: route.stationIds ? JSON.stringify(route.stationIds) : null,
       });
     }
     return true;
