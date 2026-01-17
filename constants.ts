@@ -3,37 +3,37 @@ import { RouteOption, Station, Language } from './types';
 export const ROUTES_DATA: RouteOption[] = [
   // --- กะเช้า (Morning Shift) ---
   // ขามา (Inbound)
-  { id: 'm1', name: 'สายอยุธยา (รับเช้า)', time: '06:00', type: 'morning', maxSeats: 40, stationIds: ['s5'] },
-  { id: 'm2', name: 'สายสระบุรี (รับเช้า)', time: '06:00', type: 'morning', maxSeats: 40, stationIds: ['s4'] },
-  { id: 'm3', name: 'สายรังสิต (รับเช้า)', time: '06:00', type: 'morning', maxSeats: 40, stationIds: ['s2'] },
-  { id: 'm4', name: 'สายนวนคร (รับเช้า)', time: '06:15', type: 'morning', maxSeats: 40, stationIds: ['s3'] },
+  { id: 'm1', name: 'สายอยุธยา (รับเช้า)', routeName: 'สายอยุธยา', time: '06:00', direction: 'inbound', type: 'morning', maxSeats: 40, stationIds: ['s5'] },
+  { id: 'm2', name: 'สายสระบุรี (รับเช้า)', routeName: 'สายสระบุรี', time: '06:00', direction: 'inbound', type: 'morning', maxSeats: 40, stationIds: ['s4'] },
+  { id: 'm3', name: 'สายรังสิต (รับเช้า)', routeName: 'สายรังสิต', time: '06:00', direction: 'inbound', type: 'morning', maxSeats: 40, stationIds: ['s2'] },
+  { id: 'm4', name: 'สายนวนคร (รับเช้า)', routeName: 'สายนวนคร', time: '06:15', direction: 'inbound', type: 'morning', maxSeats: 40, stationIds: ['s3'] },
 
   // ขากลับ ปกติ 17:00 (Outbound Normal)
-  { id: 'mn1', name: 'สายรังสิต (เลิกงาน)', time: '17:00', type: 'evening', maxSeats: 40, stationIds: ['s2'] },
-  { id: 'mn2', name: 'สายอยุธยา (เลิกงาน)', time: '17:00', type: 'evening', maxSeats: 40, stationIds: ['s5'] },
-  { id: 'mn3', name: 'สายสระบุรี (เลิกงาน)', time: '17:00', type: 'evening', maxSeats: 40, stationIds: ['s4'] },
+  { id: 'mn1', name: 'สายรังสิต (เลิกงาน)', routeName: 'สายรังสิต', time: '17:00', direction: 'outbound', type: 'evening', maxSeats: 40, stationIds: ['s2'] },
+  { id: 'mn2', name: 'สายอยุธยา (เลิกงาน)', routeName: 'สายอยุธยา', time: '17:00', direction: 'outbound', type: 'evening', maxSeats: 40, stationIds: ['s5'] },
+  { id: 'mn3', name: 'สายสระบุรี (เลิกงาน)', routeName: 'สายสระบุรี', time: '17:00', direction: 'outbound', type: 'evening', maxSeats: 40, stationIds: ['s4'] },
 
   // ขากลับ OT 17:30+ (Outbound OT)
-  { id: 'mo1', name: 'สายรวม (OT)', time: '17:30', type: 'evening', maxSeats: 40, stationIds: ['s1'] },
-  { id: 'mo2', name: 'สายอยุธยา (OT)', time: '19:45', type: 'evening', maxSeats: 40, stationIds: ['s5'] },
-  { id: 'mo3', name: 'สายสระบุรี (OT)', time: '19:45', type: 'evening', maxSeats: 40, stationIds: ['s4'] },
-  { id: 'mo4', name: 'สายนวนคร (OT)', time: '20:45', type: 'evening', maxSeats: 40, stationIds: ['s3'] },
+  { id: 'mo1', name: 'สายรวม (OT)', routeName: 'สายรวม', time: '17:30', direction: 'outbound', type: 'evening', maxSeats: 40, stationIds: ['s1'] },
+  { id: 'mo2', name: 'สายอยุธยา (OT)', routeName: 'สายอยุธยา', time: '19:45', direction: 'outbound', type: 'evening', maxSeats: 40, stationIds: ['s5'] },
+  { id: 'mo3', name: 'สายสระบุรี (OT)', routeName: 'สายสระบุรี', time: '19:45', direction: 'outbound', type: 'evening', maxSeats: 40, stationIds: ['s4'] },
+  { id: 'mo4', name: 'สายนวนคร (OT)', routeName: 'สายนวนคร', time: '20:45', direction: 'outbound', type: 'evening', maxSeats: 40, stationIds: ['s3'] },
 
   // --- กะดึก (Night Shift) ---
   // ขามา (Inbound)
-  { id: 'n1', name: 'สายอยุธยา (เข้ากะดึก)', time: '18:45', type: 'night', maxSeats: 40, stationIds: ['s5'] },
-  { id: 'n2', name: 'สายนวนคร (เข้ากะดึก)', time: '18:45', type: 'night', maxSeats: 40, stationIds: ['s3'] },
-  { id: 'n3', name: 'สายสระบุรี (เข้ากะดึก)', time: '19:45', type: 'night', maxSeats: 40, stationIds: ['s4'] },
+  { id: 'n1', name: 'สายอยุธยา (เข้ากะดึก)', routeName: 'สายอยุธยา', time: '18:45', direction: 'inbound', type: 'night', maxSeats: 40, stationIds: ['s5'] },
+  { id: 'n2', name: 'สายนวนคร (เข้ากะดึก)', routeName: 'สายนวนคร', time: '18:45', direction: 'inbound', type: 'night', maxSeats: 40, stationIds: ['s3'] },
+  { id: 'n3', name: 'สายสระบุรี (เข้ากะดึก)', routeName: 'สายสระบุรี', time: '19:45', direction: 'inbound', type: 'night', maxSeats: 40, stationIds: ['s4'] },
 
   // ขากลับ ปกติ 05:00 (Outbound Normal)
-  { id: 'nn1', name: 'สายสระบุรี (เลิกกะดึก)', time: '05:00', type: 'night', description: 'ส่งบ้าน', maxSeats: 20, stationIds: ['s4'] },
-  { id: 'nn2', name: 'สายนวนคร (เลิกกะดึก)', time: '05:00', type: 'night', description: 'ส่งบ้าน', maxSeats: 20, stationIds: ['s3'] },
-  { id: 'nn3', name: 'สายอยุธยา (เลิกกะดึก)', time: '05:00', type: 'night', description: 'ส่งบ้าน', maxSeats: 20, stationIds: ['s5'] },
+  { id: 'nn1', name: 'สายสระบุรี (เลิกกะดึก)', routeName: 'สายสระบุรี', time: '05:00', direction: 'outbound', type: 'night', description: 'ส่งบ้าน', maxSeats: 20, stationIds: ['s4'] },
+  { id: 'nn2', name: 'สายนวนคร (เลิกกะดึก)', routeName: 'สายนวนคร', time: '05:00', direction: 'outbound', type: 'night', description: 'ส่งบ้าน', maxSeats: 20, stationIds: ['s3'] },
+  { id: 'nn3', name: 'สายอยุธยา (เลิกกะดึก)', routeName: 'สายอยุธยา', time: '05:00', direction: 'outbound', type: 'night', description: 'ส่งบ้าน', maxSeats: 20, stationIds: ['s5'] },
 
   // ขากลับ OT 05:30+ (Outbound OT)
-  { id: 'no1', name: 'สายรวม (OT กะดึก)', time: '05:30', type: 'night', maxSeats: 20, stationIds: ['s1'] },
-  { id: 'no2', name: 'สายสระบุรี (OT กะดึก)', time: '08:00', type: 'night', description: 'หลัง OT ยาว', maxSeats: 20, stationIds: ['s4'] },
-  { id: 'no3', name: 'สายอยุธยา (OT กะดึก)', time: '08:00', type: 'night', description: 'หลัง OT ยาว', maxSeats: 20, stationIds: ['s5'] },
+  { id: 'no1', name: 'สายรวม (OT กะดึก)', routeName: 'สายรวม', time: '05:30', direction: 'outbound', type: 'night', maxSeats: 20, stationIds: ['s1'] },
+  { id: 'no2', name: 'สายสระบุรี (OT กะดึก)', routeName: 'สายสระบุรี', time: '08:00', direction: 'outbound', type: 'night', description: 'หลัง OT ยาว', maxSeats: 20, stationIds: ['s4'] },
+  { id: 'no3', name: 'สายอยุธยา (OT กะดึก)', routeName: 'สายอยุธยา', time: '08:00', direction: 'outbound', type: 'night', description: 'หลัง OT ยาว', maxSeats: 20, stationIds: ['s5'] },
 ];
 
 export const STATIONS_DATA: Station[] = [

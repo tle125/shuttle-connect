@@ -1896,7 +1896,7 @@ const BookingFlow = ({ user, lang }: any) => {
     const t = TRANSLATIONS[lang as Language];
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
-    const [activeTab, setActiveTab] = useState<'morning' | 'evening' | 'night'>('morning');
+    const [activeTab, setActiveTab] = useState<string>(''); // Will be set to first route name
     const [selectedRoute, setSelectedRoute] = useState<RouteOption | null>(null);
     const [selectedStation, setSelectedStation] = useState<Station | null>(null);
     const [selectedDates, setSelectedDates] = useState<Date[]>([]);
@@ -1911,6 +1911,12 @@ const BookingFlow = ({ user, lang }: any) => {
             setRoutes(routesData);
             setStations(stationsData);
 
+            // Set initial tab to first route name
+            const uniqueRouteNames = [...new Set(routesData.map(r => r.routeName))];
+            if (uniqueRouteNames.length > 0) {
+                setActiveTab(uniqueRouteNames[0]);
+            }
+
             // Load seat counts for all routes
             const counts: Record<string, number> = {};
             for (const route of routesData) {
@@ -1921,14 +1927,16 @@ const BookingFlow = ({ user, lang }: any) => {
         loadData();
     }, []);
 
-    // Group routes by type
-    const morningRoutes = routes.filter(r => r.type === 'morning');
-    const eveningRoutes = routes.filter(r => r.type === 'evening');
-    const nightRoutes = routes.filter(r => r.type === 'night');
-    
-    // Split night routes into inbound and outbound
-    const nightInboundRoutes = nightRoutes.filter(r => r.time >= '18:00' && r.time < '21:00'); // เข้ากะดึก (18:45-19:45)
-    const nightOutboundRoutes = nightRoutes.filter(r => r.time < '10:00'); // เลิกกะดึก (05:00-08:00)
+    // Get unique route names sorted
+    const uniqueRouteNames = useMemo(() => {
+        const names = [...new Set(routes.map(r => r.routeName))];
+        return names.sort();
+    }, [routes]);
+
+    // Get routes for active tab (grouped by route name)
+    const routesForActiveTab = useMemo(() => {
+        return routes.filter(r => r.routeName === activeTab);
+    }, [routes, activeTab]);
 
     const handleRouteSelect = (route: RouteOption, dir: 'inbound' | 'outbound') => {
         // ดึง route ล่าสุด จาก state routes เพื่อให้ stationIds ถูกต้อง
@@ -1997,7 +2005,7 @@ const BookingFlow = ({ user, lang }: any) => {
                     timestamp: travelDate.getTime(),
                     status: BookingStatus.WAITING,
                     direction: direction,
-                    shift: activeTab === 'morning' ? 'morning' : (activeTab === 'night' ? 'night' : undefined)
+                    shift: selectedRoute.type
                 };
                 await saveBooking(newBooking);
                 createdCount++;
@@ -2034,62 +2042,60 @@ const BookingFlow = ({ user, lang }: any) => {
             {/* STEP 1: Select Route (Tabs + Lists) */}
             {step === 1 && (
                 <>
-                    <div className="flex bg-white p-1 rounded-xl shadow-sm mb-6 sticky top-16 z-10">
-                        {(['morning', 'evening', 'night'] as const).map(tab => (
+                    <div className="flex gap-2 bg-white p-2 rounded-xl shadow-sm mb-6 sticky top-16 z-10 overflow-x-auto no-scrollbar">
+                        {uniqueRouteNames.map(routeName => (
                             <button
-                                key={tab}
-                                onClick={() => setActiveTab(tab)}
-                                className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all capitalize ${
-                                    activeTab === tab 
+                                key={routeName}
+                                onClick={() => setActiveTab(routeName)}
+                                className={`px-4 py-2 text-sm font-bold rounded-lg transition-all whitespace-nowrap flex-shrink-0 ${
+                                    activeTab === routeName 
                                     ? 'bg-blue-600 text-white shadow-md' 
-                                    : 'text-gray-500 hover:bg-gray-50'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
                             >
-                                {t[tab as keyof typeof t] || tab}
+                                {routeName}
                             </button>
                         ))}
                     </div>
 
                     <div className="flex-1 overflow-y-auto no-scrollbar space-y-2 pb-20">
-                        {activeTab === 'morning' && (
-                            <RouteSection
-                                title="รอบเช้า (Morning)"
-                                routes={morningRoutes}
-                                direction="inbound"
-                                onRouteClick={handleRouteSelect}
-                                t={t}
-                                seatCounts={seatCounts}
-                            />
-                        )}
-                        {activeTab === 'evening' && (
-                            <RouteSection
-                                title="รอบเย็น (Evening)"
-                                routes={eveningRoutes}
-                                direction="outbound"
-                                onRouteClick={handleRouteSelect}
-                                t={t}
-                                seatCounts={seatCounts}
-                            />
-                        )}
-                        {activeTab === 'night' && (
-                            <>
-                                <RouteSection
-                                    title="ขารับ - เข้ากะดึก (Inbound)"
-                                    routes={nightInboundRoutes}
-                                    direction="inbound"
-                                    onRouteClick={handleRouteSelect}
-                                    t={t}
-                                    seatCounts={seatCounts}
-                                />
-                                <RouteSection
-                                    title="ขาส่ง - เลิกกะดึก (Outbound)"
-                                    routes={nightOutboundRoutes}
-                                    direction="outbound"
-                                    onRouteClick={handleRouteSelect}
-                                    t={t}
-                                    seatCounts={seatCounts}
-                                />
-                            </>
+                        {routesForActiveTab.length > 0 ? (
+                            <div className="space-y-2">
+                                {/* Group routes by direction */}
+                                {(() => {
+                                    const inbound = routesForActiveTab.filter(r => r.direction === 'inbound');
+                                    const outbound = routesForActiveTab.filter(r => r.direction === 'outbound');
+
+                                    return (
+                                        <>
+                                            {inbound.length > 0 && (
+                                                <RouteSection
+                                                    title={`${activeTab} - ขารับ (Inbound)`}
+                                                    routes={inbound}
+                                                    direction="inbound"
+                                                    onRouteClick={handleRouteSelect}
+                                                    t={t}
+                                                    seatCounts={seatCounts}
+                                                />
+                                            )}
+                                            {outbound.length > 0 && (
+                                                <RouteSection
+                                                    title={`${activeTab} - ขาส่ง (Outbound)`}
+                                                    routes={outbound}
+                                                    direction="outbound"
+                                                    onRouteClick={handleRouteSelect}
+                                                    t={t}
+                                                    seatCounts={seatCounts}
+                                                />
+                                            )}
+                                        </>
+                                    );
+                                })()}
+                            </div>
+                        ) : (
+                            <div className="text-center text-gray-400 py-8">
+                                No routes available
+                            </div>
                         )}
                     </div>
                 </>

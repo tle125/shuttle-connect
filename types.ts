@@ -21,7 +21,9 @@ export interface User {
 export interface RouteOption {
   id: string;
   name: string;
+  routeName: string; // ชื่อสายรถ เช่น "สายสระบุรี"
   time: string;
+  direction: 'inbound' | 'outbound'; // ขารับ หรือ ขาส่ง
   type: 'morning' | 'evening' | 'night';
   maxSeats: number;
   description?: string;
