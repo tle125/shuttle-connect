@@ -1911,12 +1911,6 @@ const BookingFlow = ({ user, lang }: any) => {
             setRoutes(routesData);
             setStations(stationsData);
 
-            // Set initial tab to first route name
-            const uniqueRouteNames = [...new Set(routesData.map(r => r.routeName))];
-            if (uniqueRouteNames.length > 0) {
-                setActiveTab(uniqueRouteNames[0]);
-            }
-
             // Load seat counts for all routes
             const counts: Record<string, number> = {};
             for (const route of routesData) {
@@ -1932,6 +1926,13 @@ const BookingFlow = ({ user, lang }: any) => {
         const names = [...new Set(routes.map(r => r.routeName))];
         return names.sort();
     }, [routes]);
+
+    // Set initial activeTab when routes are loaded
+    useEffect(() => {
+        if (uniqueRouteNames.length > 0 && !activeTab) {
+            setActiveTab(uniqueRouteNames[0]);
+        }
+    }, [uniqueRouteNames, activeTab]);
 
     // Get routes for active tab (grouped by route name)
     const routesForActiveTab = useMemo(() => {
