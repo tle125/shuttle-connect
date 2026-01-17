@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import {
   Bus, Map as MapIcon, User as UserIcon, LogOut, Settings,
-  PlusCircle, Search, QrCode, Navigation, Phone, Globe, Menu, X, CheckCircle, AlertTriangle, ArrowRight, ArrowLeft, Sun, Moon, Sunset, Clock, History, Edit, Truck,
+  PlusCircle, Search, QrCode, Navigation, Phone, Globe, Menu, X, CheckCircle, AlertTriangle, ArrowRight, ArrowLeft, Sun, Moon, Sunset, Clock, History, Edit, Truck, Download,
   ChevronDown, ChevronUp, Calendar, Check, ChevronLeft, ChevronRight, BarChart as BarChartIcon, Camera, Megaphone, UserX, Users
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -916,6 +916,15 @@ const AdminDashboard = ({ lang, toggleLang }: any) => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [lastScanned, setLastScanned] = useState<string | null>(null);
     const [newsContent, setNewsContent] = useState('');
+    const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+    const [exportFilters, setExportFilters] = useState({
+        morningInbound: true,
+        morningOutbound: true,
+        eveningInbound: true,
+        eveningOutbound: true,
+        nightInbound: true,
+        nightOutbound: true
+    });
 
     // Load bookings, news, routes and stations from Supabase
     const loadData = async () => {
@@ -1026,17 +1035,54 @@ const AdminDashboard = ({ lang, toggleLang }: any) => {
     };
 
     const exportData = () => {
-        const headers = ["ID", "ชื่อผู้โดยสาร", "สาย", "จุดจอด", "สถานะ", "เวลา"];
-        const rows = dateFilteredBookings.map(b => [
-            b.id,
-            b.userName,
-            b.routeName,
-            b.stationName,
-            b.status === BookingStatus.COMPLETED ? 'ขึ้นรถแล้ว' :
-            b.status === BookingStatus.CANCELLED ? 'ยกเลิก' :
-            b.status === BookingStatus.NOSHOW ? 'ไม่มา' : 'รอขึ้นรถ',
-            new Date(b.timestamp).toLocaleString('th-TH')
-        ]);
+        // Filter bookings based on selected shifts and directions
+        const filteredForExport = dateFilteredBookings.filter(b => {
+            const route = routes.find(r => r.id === b.routeId);
+            if (!route) return false;
+
+            const shift = route.type; // 'morning', 'evening', or 'night'
+            const direction = b.direction || 'inbound'; // 'inbound' or 'outbound'
+
+            if (shift === 'morning') {
+                return direction === 'inbound' ? exportFilters.morningInbound : exportFilters.morningOutbound;
+            } else if (shift === 'evening') {
+                return direction === 'inbound' ? exportFilters.eveningInbound : exportFilters.eveningOutbound;
+            } else if (shift === 'night') {
+                return direction === 'inbound' ? exportFilters.nightInbound : exportFilters.nightOutbound;
+            }
+            return false;
+        });
+
+        if (filteredForExport.length === 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'No Data',
+                text: 'No bookings found for the selected filters.',
+                timer: 2000,
+                showConfirmButton: false
+            });
+            return;
+        }
+
+        const headers = ["ID", "ชื่อผู้โดยสาร", "สาย", "จุดจอด", "กะ", "ทิศทาง", "สถานะ", "เวลา"];
+        const rows = filteredForExport.map(b => {
+            const route = routes.find(r => r.id === b.routeId);
+            const shiftLabel = route?.type === 'morning' ? 'เช้า' : route?.type === 'evening' ? 'เย็น' : 'ดึก';
+            const directionLabel = b.direction === 'outbound' ? 'ส่ง' : 'รับ';
+            
+            return [
+                b.id,
+                b.userName,
+                b.routeName,
+                b.stationName,
+                shiftLabel,
+                directionLabel,
+                b.status === BookingStatus.COMPLETED ? 'ขึ้นรถแล้ว' :
+                b.status === BookingStatus.CANCELLED ? 'ยกเลิก' :
+                b.status === BookingStatus.NOSHOW ? 'ไม่มา' : 'รอขึ้นรถ',
+                new Date(b.timestamp).toLocaleString('th-TH')
+            ];
+        });
 
         // Add BOM for UTF-8 to support Thai characters in Excel
         const BOM = "\uFEFF";
@@ -1055,6 +1101,8 @@ const AdminDashboard = ({ lang, toggleLang }: any) => {
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
+
+        setIsExportDialogOpen(false);
     };
 
     const filteredBookings = dateFilteredBookings.filter(b =>
@@ -1614,7 +1662,7 @@ const AdminDashboard = ({ lang, toggleLang }: any) => {
                 <Button onClick={() => setScanMode(!scanMode)} variant={scanMode ? 'primary' : 'outline'}>
                     <QrCode size={18} /> {scanMode ? 'Close Cam' : 'Scan QR'}
                 </Button>
-                <Button onClick={exportData} variant="secondary">
+                <Button onClick={() => setIsExportDialogOpen(true)} variant="secondary">
                     <Settings size={18} /> {t.export}
                 </Button>
                 <Button onClick={() => setIsManageVehicles(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200">
@@ -1624,6 +1672,110 @@ const AdminDashboard = ({ lang, toggleLang }: any) => {
                     <MapIcon size={18} /> จัดการสายรถ
                 </Button>
             </div>
+
+            {/* Export Dialog */}
+            {isExportDialogOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsExportDialogOpen(false)} />
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 relative z-10 animate-in zoom-in-95 duration-200">
+                        <h3 className="text-lg font-bold text-gray-900 mb-4">เลือกกะที่ต้องการส่งออก</h3>
+                        
+                        <div className="space-y-3 mb-6 max-h-96 overflow-y-auto">
+                            {/* Morning Shift */}
+                            <div className="border border-gray-200 rounded-lg p-4">
+                                <div className="font-bold text-blue-600 mb-3 flex items-center gap-2">
+                                    <Sun size={16} /> รอบเช้า (Morning)
+                                </div>
+                                <label className="flex items-center gap-3 mb-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                                    <input
+                                        type="checkbox"
+                                        checked={exportFilters.morningInbound}
+                                        onChange={(e) => setExportFilters(prev => ({ ...prev, morningInbound: e.target.checked }))}
+                                        className="w-4 h-4 rounded"
+                                    />
+                                    <span className="text-sm text-gray-700">ขารับ (Inbound)</span>
+                                </label>
+                                <label className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                                    <input
+                                        type="checkbox"
+                                        checked={exportFilters.morningOutbound}
+                                        onChange={(e) => setExportFilters(prev => ({ ...prev, morningOutbound: e.target.checked }))}
+                                        className="w-4 h-4 rounded"
+                                    />
+                                    <span className="text-sm text-gray-700">ขาส่ง (Outbound)</span>
+                                </label>
+                            </div>
+
+                            {/* Evening Shift */}
+                            <div className="border border-gray-200 rounded-lg p-4">
+                                <div className="font-bold text-orange-500 mb-3 flex items-center gap-2">
+                                    <Sunset size={16} /> รอบเย็น (Evening)
+                                </div>
+                                <label className="flex items-center gap-3 mb-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                                    <input
+                                        type="checkbox"
+                                        checked={exportFilters.eveningInbound}
+                                        onChange={(e) => setExportFilters(prev => ({ ...prev, eveningInbound: e.target.checked }))}
+                                        className="w-4 h-4 rounded"
+                                    />
+                                    <span className="text-sm text-gray-700">ขารับ (Inbound)</span>
+                                </label>
+                                <label className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                                    <input
+                                        type="checkbox"
+                                        checked={exportFilters.eveningOutbound}
+                                        onChange={(e) => setExportFilters(prev => ({ ...prev, eveningOutbound: e.target.checked }))}
+                                        className="w-4 h-4 rounded"
+                                    />
+                                    <span className="text-sm text-gray-700">ขาส่ง (Outbound)</span>
+                                </label>
+                            </div>
+
+                            {/* Night Shift */}
+                            <div className="border border-gray-200 rounded-lg p-4">
+                                <div className="font-bold text-purple-600 mb-3 flex items-center gap-2">
+                                    <Moon size={16} /> กะดึก (Night)
+                                </div>
+                                <label className="flex items-center gap-3 mb-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                                    <input
+                                        type="checkbox"
+                                        checked={exportFilters.nightInbound}
+                                        onChange={(e) => setExportFilters(prev => ({ ...prev, nightInbound: e.target.checked }))}
+                                        className="w-4 h-4 rounded"
+                                    />
+                                    <span className="text-sm text-gray-700">ขารับ (Inbound - เข้ากะดึก)</span>
+                                </label>
+                                <label className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                                    <input
+                                        type="checkbox"
+                                        checked={exportFilters.nightOutbound}
+                                        onChange={(e) => setExportFilters(prev => ({ ...prev, nightOutbound: e.target.checked }))}
+                                        className="w-4 h-4 rounded"
+                                    />
+                                    <span className="text-sm text-gray-700">ขาส่ง (Outbound - เลิกกะดึก)</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        {/* Buttons */}
+                        <div className="flex gap-3">
+                            <Button 
+                                variant="secondary" 
+                                onClick={() => setIsExportDialogOpen(false)}
+                                fullWidth
+                            >
+                                ยกเลิก
+                            </Button>
+                            <Button 
+                                onClick={exportData}
+                                fullWidth
+                            >
+                                <Download size={18} /> ส่งออก
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Camera View */}
             {scanMode && (
