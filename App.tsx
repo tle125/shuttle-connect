@@ -1773,6 +1773,10 @@ const BookingFlow = ({ user, lang }: any) => {
     const morningRoutes = routes.filter(r => r.type === 'morning');
     const eveningRoutes = routes.filter(r => r.type === 'evening');
     const nightRoutes = routes.filter(r => r.type === 'night');
+    
+    // Split night routes into inbound and outbound
+    const nightInboundRoutes = nightRoutes.filter(r => r.time >= '18:00' && r.time < '21:00'); // เข้ากะดึก (18:45-19:45)
+    const nightOutboundRoutes = nightRoutes.filter(r => r.time < '10:00'); // เลิกกะดึก (05:00-08:00)
 
     const handleRouteSelect = (route: RouteOption, dir: 'inbound' | 'outbound') => {
         // ดึง route ล่าสุด จาก state routes เพื่อให้ stationIds ถูกต้อง
@@ -1916,14 +1920,24 @@ const BookingFlow = ({ user, lang }: any) => {
                             />
                         )}
                         {activeTab === 'night' && (
-                            <RouteSection
-                                title="กะดึก (Night)"
-                                routes={nightRoutes}
-                                direction="inbound"
-                                onRouteClick={handleRouteSelect}
-                                t={t}
-                                seatCounts={seatCounts}
-                            />
+                            <>
+                                <RouteSection
+                                    title="ขารับ - เข้ากะดึก (Inbound)"
+                                    routes={nightInboundRoutes}
+                                    direction="inbound"
+                                    onRouteClick={handleRouteSelect}
+                                    t={t}
+                                    seatCounts={seatCounts}
+                                />
+                                <RouteSection
+                                    title="ขาส่ง - เลิกกะดึก (Outbound)"
+                                    routes={nightOutboundRoutes}
+                                    direction="outbound"
+                                    onRouteClick={handleRouteSelect}
+                                    t={t}
+                                    seatCounts={seatCounts}
+                                />
+                            </>
                         )}
                     </div>
                 </>

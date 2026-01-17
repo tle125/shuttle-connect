@@ -22,7 +22,7 @@ export interface RouteOption {
   id: string;
   name: string;
   time: string;
-  type: 'morning' | 'evening';
+  type: 'morning' | 'evening' | 'night';
   maxSeats: number;
   description?: string;
   stationIds?: string[]; // เพิ่มบรรทัดนี้
