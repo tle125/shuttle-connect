@@ -121,10 +121,25 @@ export const getRoutes = async (): Promise<RouteOption[]> => {
       const routes = routesData.map(r => {
         const detail = details?.find(d => d.route_id === r.id);
         const stationIds = r.station_ids ? (Array.isArray(r.station_ids) ? r.station_ids : JSON.parse(r.station_ids)) : undefined;
+        
+        // Extract routeName from name or use default
+        let routeName = r.route_name || r.name;
+        if (!routeName.includes('สาย') && !routeName.includes('รวม')) {
+          // Try to extract from name field
+          const match = r.name.match(/สาย\w+|รวม/);
+          routeName = match ? match[0] : routeName;
+        }
+        
+        // Determine direction from name or use field
+        const direction = r.direction || 
+          (r.name.includes('รับ') || r.name.includes('เข้า') || r.time < '12:00' ? 'inbound' : 'outbound');
+        
         return {
           id: r.id,
           name: r.name,
+          routeName: routeName,
           time: r.time,
+          direction: direction as 'inbound' | 'outbound',
           type: r.type as 'morning' | 'evening' | 'night',
           description: r.description || undefined,
           maxSeats: r.max_seats || 40,
@@ -142,7 +157,13 @@ export const getRoutes = async (): Promise<RouteOption[]> => {
     const stored = localStorage.getItem(KEYS.ROUTES);
     if (stored) {
       try {
-        return JSON.parse(stored);
+        const routes = JSON.parse(stored) as RouteOption[];
+        // Ensure all routes have required properties
+        return routes.map(r => ({
+          ...r,
+          routeName: r.routeName || r.name || '',
+          direction: r.direction || (r.name.includes('รับ') || r.name.includes('เข้า') || r.time < '12:00' ? 'inbound' : 'outbound')
+        }));
       } catch {
         // Fall through to constants
       }
@@ -166,7 +187,13 @@ export const getRoutes = async (): Promise<RouteOption[]> => {
     const stored = localStorage.getItem(KEYS.ROUTES);
     if (stored) {
       try {
-        return JSON.parse(stored);
+        const routes = JSON.parse(stored) as RouteOption[];
+        // Ensure all routes have required properties
+        return routes.map(r => ({
+          ...r,
+          routeName: r.routeName || r.name || '',
+          direction: r.direction || (r.name.includes('รับ') || r.name.includes('เข้า') || r.time < '12:00' ? 'inbound' : 'outbound')
+        }));
       } catch {
         return ROUTES_DATA;
       }
